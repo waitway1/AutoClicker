@@ -91,6 +91,7 @@ class ClickEngine(QObject):
     def __init__(self):
         super().__init__()
         self._simulator = ClickSimulator()
+        self._translator = lambda key, **kwargs: key.format(**kwargs)
         self._running = False
         self._paused = False
         self._thread = None
@@ -135,13 +136,19 @@ class ClickEngine(QObject):
             return time.time() - self._start_time
         return 0.0
 
+    def set_translator(self, translator):
+        self._translator = translator
+
+    def _tr(self, key, **kwargs):
+        return self._translator(key, **kwargs)
+
     def start(self):
         if self._running and not self._paused:
             return
         if self._paused:
             self._paused = False
             self.status_changed.emit("running")
-            self.log_message.emit("已继续")
+            self.log_message.emit(self._tr("log.resumed"))
             return
 
         self._running = True
@@ -152,21 +159,28 @@ class ClickEngine(QObject):
 
         self._thread = threading.Thread(target=self._run_loop, daemon=True)
         self._thread.start()
-        mode_names = {"left": "左键", "right": "右键", "double": "双击", "long": "长按"}
-        self.log_message.emit(f"已启动 ({mode_names.get(self.click_mode, self.click_mode)} 模式)")
+        mode_names = {
+            "left": self._tr("mode.left"),
+            "right": self._tr("mode.right"),
+            "double": self._tr("mode.double"),
+            "long": self._tr("mode.long"),
+        }
+        self.log_message.emit(
+            self._tr("log.started", mode=mode_names.get(self.click_mode, self.click_mode))
+        )
 
     def pause(self):
         if self._running and not self._paused:
             self._paused = True
             self.status_changed.emit("paused")
-            self.log_message.emit("已暂停")
+            self.log_message.emit(self._tr("log.paused"))
 
     def stop(self):
         self._running = False
         self._paused = False
         self._start_time = 0
         self.status_changed.emit("stopped")
-        self.log_message.emit("已停止")
+        self.log_message.emit(self._tr("log.stopped"))
 
     def toggle(self):
         if self._running and not self._paused:
@@ -178,7 +192,7 @@ class ClickEngine(QObject):
 
     def emergency_stop(self):
         self.stop()
-        self.log_message.emit("紧急停止")
+        self.log_message.emit(self._tr("log.emergency_stop"))
 
     def set_circle(self, x, y, radius):
         self.circle_x = x
@@ -202,7 +216,9 @@ class ClickEngine(QObject):
     def _run_loop(self):
         # Delay start
         if self.delay_start_seconds > 0:
-            self.log_message.emit(f"延迟启动: {self.delay_start_seconds}秒")
+            self.log_message.emit(
+                self._tr("log.delay_start", seconds=self.delay_start_seconds)
+            )
             self.status_changed.emit("waiting")
             deadline = time.time() + self.delay_start_seconds
             while time.time() < deadline and self._running:
@@ -224,7 +240,7 @@ class ClickEngine(QObject):
             if self.timer_mode == "countdown":
                 elapsed = time.time() - self._start_time
                 if elapsed >= self.countdown_seconds:
-                    self.log_message.emit("倒计时结束")
+                    self.log_message.emit(self._tr("log.countdown_finished"))
                     self._running = False
                     self.status_changed.emit("stopped")
                     break
@@ -244,7 +260,7 @@ class ClickEngine(QObject):
                     hold_ms=self.hold_duration_ms if self.click_mode == "long" else 10,
                 )
             except Exception as e:
-                self.log_message.emit(f"点击错误: {e}")
+                self.log_message.emit(self._tr("log.click_error", error=e))
 
             self._click_count += 1
             self.click_count_changed.emit(self._click_count)

@@ -26,6 +26,8 @@ DEFAULT_CONFIG = {
     "window_x": None,
     "window_y": None,
     "last_profile": "default",
+    "theme_mode": "system",
+    "language_mode": "system",
     "position_jitter_px": 5,
     "micro_pause_chance": 0.02,
     "micro_pause_min_ms": 100,

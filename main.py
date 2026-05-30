@@ -9,7 +9,7 @@ from PySide6.QtWidgets import QApplication
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QFont
 
-from ui.styles import DARK_THEME
+from ui.styles import get_theme_stylesheet
 from ui.main_window import MainWindow
 from core.config_manager import ConfigManager
 
@@ -24,14 +24,13 @@ def main():
     app.setApplicationName("AutoClicker Pro")
     app.setStyle("Fusion")
 
-    # Apply dark theme
-    app.setStyleSheet(DARK_THEME)
-
     # Default font
-    font = QFont("Segoe UI", 10)
+    font = QFont("Microsoft YaHei UI", 10)
     app.setFont(font)
 
     config = ConfigManager()
+    app.setStyleSheet(get_theme_stylesheet(config.get("theme_mode", "system")))
+
     window = MainWindow(config)
     window.show()
 

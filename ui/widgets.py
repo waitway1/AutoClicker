@@ -2,8 +2,16 @@ from PySide6.QtWidgets import (
     QFrame, QLabel, QVBoxLayout, QHBoxLayout, QWidget, QSlider, QPushButton,
     QGraphicsDropShadowEffect, QSpinBox,
 )
-from PySide6.QtCore import Qt, Signal, QPropertyAnimation, QEasingCurve, Property
+from PySide6.QtCore import Qt, Signal
 from PySide6.QtGui import QColor
+
+
+def _apply_soft_shadow(widget, blur=22, y_offset=8, alpha=24):
+    effect = QGraphicsDropShadowEffect(widget)
+    effect.setBlurRadius(blur)
+    effect.setOffset(0, y_offset)
+    effect.setColor(QColor(0, 0, 0, alpha))
+    widget.setGraphicsEffect(effect)
 
 
 class NoScrollSpinBox(QSpinBox):
@@ -25,19 +33,19 @@ class NoScrollSpinBox(QSpinBox):
 
 
 class Card(QFrame):
-    """Rounded dark card container."""
+    """Rounded card container."""
 
     def __init__(self, title="", parent=None):
         super().__init__(parent)
         self.setObjectName("card")
+        _apply_soft_shadow(self, alpha=18)
         self._layout = QVBoxLayout(self)
-        self._layout.setContentsMargins(16, 14, 16, 14)
-        self._layout.setSpacing(10)
+        self._layout.setContentsMargins(18, 16, 18, 16)
+        self._layout.setSpacing(12)
 
-        if title:
-            lbl = QLabel(title)
-            lbl.setStyleSheet("font-weight: bold; font-size: 13px; color: #e6edf3;")
-            self._layout.addWidget(lbl)
+        self.title_label = QLabel(title)
+        self.title_label.setObjectName("card_title")
+        self._layout.addWidget(self.title_label)
 
     def add_widget(self, w):
         self._layout.addWidget(w)
@@ -45,16 +53,20 @@ class Card(QFrame):
     def add_layout(self, l):
         self._layout.addLayout(l)
 
+    def set_title(self, text):
+        self.title_label.setText(text)
+
 
 class StatCard(QFrame):
     """Small statistic display card."""
 
     def __init__(self, label_text, value_text="0", parent=None):
         super().__init__(parent)
-        self.setObjectName("card")
+        self.setObjectName("stat_card")
+        _apply_soft_shadow(self, blur=18, y_offset=6, alpha=16)
         layout = QVBoxLayout(self)
-        layout.setContentsMargins(12, 10, 12, 10)
-        layout.setSpacing(2)
+        layout.setContentsMargins(14, 12, 14, 12)
+        layout.setSpacing(3)
 
         self.value_label = QLabel(value_text)
         self.value_label.setObjectName("stat_value")
@@ -68,6 +80,9 @@ class StatCard(QFrame):
 
     def set_value(self, text):
         self.value_label.setText(str(text))
+
+    def set_label(self, text):
+        self.text_label.setText(text)
 
 
 class ToggleSwitch(QWidget):
@@ -99,15 +114,18 @@ class ToggleSwitch(QWidget):
         p = QPainter(self)
         p.setRenderHint(QPainter.Antialiasing)
 
-        # Track
-        color = QColor("#238636") if self._checked else QColor("#30363d")
+        is_dark = self.palette().window().color().lightness() < 128
+        off_color = QColor("#48484a") if is_dark else QColor("#d1d1d6")
+        on_color = QColor("#34c759")
+
+        color = on_color if self._checked else off_color
         p.setBrush(QBrush(color))
         p.setPen(Qt.NoPen)
         p.drawRoundedRect(0, 0, 44, 24, 12, 12)
 
-        # Handle
         target_x = 22 if self._checked else 4
         p.setBrush(QBrush(QColor("#ffffff")))
+        p.setPen(QPen(QColor(0, 0, 0, 24), 1))
         p.drawEllipse(target_x, 2, 20, 20)
         p.end()
 
@@ -117,10 +135,7 @@ class SectionLabel(QLabel):
 
     def __init__(self, text, parent=None):
         super().__init__(text, parent)
-        self.setStyleSheet(
-            "font-size: 11px; font-weight: bold; color: #8b949e; "
-            "text-transform: uppercase; letter-spacing: 0.5px; background: transparent;"
-        )
+        self.setObjectName("section_label")
 
 
 class HotkeyButton(QPushButton):
@@ -131,6 +146,7 @@ class HotkeyButton(QPushButton):
         super().__init__(key_name, parent)
         self.setObjectName("record_btn")
         self.action_name = action_name
+        self._recording_text = "请按键..."
         self.setFixedHeight(30)
         self.setMinimumWidth(80)
         self._recording = False
@@ -138,7 +154,7 @@ class HotkeyButton(QPushButton):
     def set_recording_state(self, recording):
         self._recording = recording
         if recording:
-            self.setText("请按键...")
+            self.setText(self._recording_text)
             self.setProperty("class", "recording")
         else:
             self.setProperty("class", "")
@@ -149,6 +165,16 @@ class HotkeyButton(QPushButton):
         self.setText(name)
         self.set_recording_state(False)
 
+    def set_recording_text(self, text):
+        self._recording_text = text
+        if self._recording:
+            self.setText(text)
+
+    def key_name(self):
+        if self._recording:
+            return ""
+        return self.text()
+
 
 class AccentButton(QPushButton):
     """Primary accent button."""
@@ -156,7 +182,7 @@ class AccentButton(QPushButton):
     def __init__(self, text, parent=None):
         super().__init__(text, parent)
         self.setObjectName("accent")
-        self.setFixedHeight(36)
+        self.setFixedHeight(40)
         self.setCursor(Qt.PointingHandCursor)
 
 
@@ -166,5 +192,5 @@ class DangerButton(QPushButton):
     def __init__(self, text, parent=None):
         super().__init__(text, parent)
         self.setObjectName("danger")
-        self.setFixedHeight(36)
+        self.setFixedHeight(40)
         self.setCursor(Qt.PointingHandCursor)
